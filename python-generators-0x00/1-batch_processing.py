@@ -1,19 +1,27 @@
-from seed import connect_to_prodev
+import seed
 
 def stream_users_in_batches(batch_size):
-    connection = connect_to_prodev()
+    """Generator that yields batches of users from the DB"""
+    connection = seed.connect_to_prodev()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM user_data")
+
+    offset = 0
     while True:
-        rows = cursor.fetchmany(batch_size)
+        cursor.execute("SELECT * FROM user_data LIMIT %s OFFSET %s", (batch_size, offset))
+        rows = cursor.fetchall()
         if not rows:
             break
         yield rows
+        offset += batch_size
+
     cursor.close()
     connection.close()
 
+
 def batch_processing(batch_size):
+    """Processes batches to yield users older than 25"""
     for batch in stream_users_in_batches(batch_size):
         for user in batch:
             if user["age"] > 25:
                 print(user)
+
